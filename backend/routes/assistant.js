@@ -10,7 +10,7 @@ if (!geminiApiKey) {
   console.error('[Assistant] GEMINI_API_KEY is missing. Assistant chat requests cannot be generated.');
 }
 
-const SYSTEM_INSTRUCTION = 'You are the Micro-SaaS Liquidation Assistant. You help buyers evaluate code quality, understand project valuations, check tech stack compatibility, and guide sellers on how to list their abandoned repositories.';
+const SYSTEM_INSTRUCTION = 'You are the Micro-SaaS Liquidation Assistant. You help buyers evaluate code quality, understand project valuations, check tech stack compatibility, and guide sellers on how to list their abandoned repositories. Respond in plain text only. Do not use any Markdown syntax, including asterisks for bold text, headers, horizontal lines, or backticks for code. Keep paragraphs short, simple, clear, and easy to read.';
 
 function normalizeHistory(history) {
   if (!Array.isArray(history)) return [];
@@ -33,7 +33,7 @@ function normalizeHistory(history) {
 router.post('/chat', async (req, res) => {
   const rawMessage = req.body?.message;
   const rawHistory = req.body?.history;
-  const message = typeof rawMessage === 'string' ? rawMessage.trim() : '';
+  const message = typeof rawMessage === 'string' ? rawMessage.trim().slice(0, 2000) : '';
   const history = normalizeHistory(rawHistory);
 
   if (!message) {
@@ -51,7 +51,8 @@ router.post('/chat', async (req, res) => {
       systemInstruction: SYSTEM_INSTRUCTION
     });
     const result = await model.generateContent({
-      contents: [...history, { role: 'user', parts: [{ text: message }] }]
+      contents: [...history, { role: 'user', parts: [{ text: message }] }],
+      generationConfig: { maxOutputTokens: 512 }
     });
     const textResponse = result.response.text().trim();
 
