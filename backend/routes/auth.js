@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const express = require('express');
 const nodemailer = require('nodemailer');
+const passport = require('passport');
 const User = require('../models/User');
 const { requireAuth } = require('../middleware/auth');
 
@@ -89,6 +90,21 @@ router.post('/verify-otp', requireAuth, async (req, res) => {
   user.otpExpiresAt = undefined;
   await user.save();
   return res.json({ message: 'Email verified successfully.', isEmailVerified: true });
+});
+
+router.get('/google', passport.authenticate('google', {
+  scope: ['profile', 'email'],
+  prompt: 'select_account'
+}));
+
+router.get('/github', passport.authenticate('github', {
+  scope: ['user:email'],
+  prompt: 'select_account'
+}));
+
+router.post('/logout', (req, res) => {
+  res.clearCookie('token');
+  return res.json({ message: 'Logged out successfully' });
 });
 
 module.exports = router;

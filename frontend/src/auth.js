@@ -42,7 +42,9 @@ export function useAuth() {
   function signOut() {
     localStorage.removeItem('token');
     localStorage.removeItem('repomarket_token');
+    sessionStorage.removeItem('token');
     setUser(null);
+    window.location.href = '/';
   }
 
   return { user, loading, signOut };
