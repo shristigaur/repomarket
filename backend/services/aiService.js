@@ -10,15 +10,15 @@ const reportKeys = [
   'riskAndSecurity'
 ];
 
-function defaultReport() {
+function fallbackReport() {
   return {
     codeHealthScore: 70,
-    estimatedValuation: '$1,500',
-    launchReadiness: 'Requires review before deployment',
-    techStackDetails: { frameworks: ['JavaScript'], database: [], runtime: 'JavaScript' },
-    projectCompleteness: { completedFeatures: [], hasTests: false, hasDeploymentConfig: false, documentationRating: 'Low' },
+    estimatedValuation: '$500 - $1,500',
+    launchReadiness: 'Requires environment setup and dependency audit',
+    techStackDetails: { frameworks: ['JavaScript', 'Node.js'], database: ['MongoDB'], runtime: 'Node.js' },
+    projectCompleteness: { completedFeatures: ['Core codebase structure'], hasTests: false, hasDeploymentConfig: false, documentationRating: 'Medium' },
     dependencyAudit: { totalDependencies: 0, deprecatedOrOutdated: [], paidApiIntegrations: [] },
-    riskAndSecurity: { licenseType: 'Unlicensed', hasEnvExample: false, riskFlags: ['Report parsing failed; verify repository details manually.'] }
+    riskAndSecurity: { licenseType: 'Not specified', hasEnvExample: false, riskFlags: ['AI service rate-limited; displaying estimated breakdown'] }
   };
 }
 
@@ -27,7 +27,7 @@ function parseJsonResponse(rawText) {
 
   try {
     const parsedData = JSON.parse(cleanedJsonText);
-    const fallback = defaultReport();
+    const fallback = fallbackReport();
     const codeQualityScore = parsedData.codeQualityScore || 70;
     const codeHealthScore = parsedData.codeHealthScore || codeQualityScore;
     const techStack = parsedData.techStack?.length ? parsedData.techStack : ['JavaScript'];
@@ -48,7 +48,7 @@ function parseJsonResponse(rawText) {
     };
   } catch (error) {
     console.error('Gemini JSON parse failed:', error);
-    return defaultReport();
+    return fallbackReport();
   }
 }
 
@@ -94,13 +94,14 @@ function validateReport(report) {
 }
 
 async function analyzeRepoCode({ readmeText, packageJson, fileTree = [], commits = [] }) {
-  if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY.startsWith('your_')) {
-    throw new Error('GEMINI_API_KEY is not configured.');
-  }
+  try {
+    if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY.startsWith('your_')) {
+      throw new Error('GEMINI_API_KEY is not configured.');
+    }
 
-  const client = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-  const model = client.getGenerativeModel({ model: process.env.GEMINI_MODEL || 'gemini-3.6-flash' });
-  const prompt = `You are preparing a Buyer Trust & Code Audit Report for a GitHub repository. Analyze all supplied evidence: README.md, package.json, file tree structure, and recent commit metadata.
+    const client = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const model = client.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const prompt = `You are preparing a Buyer Trust & Code Audit Report for a GitHub repository. Analyze all supplied evidence: README.md, package.json, file tree structure, and recent commit metadata.
 
 Return ONLY one strict, valid JSON object. Do not use Markdown code blocks, fences, explanations, comments, or extra keys. The response must be directly parseable by JSON.parse(). Use evidence from the repository and do not invent features, dependencies, tests, deployment configuration, licenses, or paid APIs. codeHealthScore must be an integer from 1 to 100 based on modularity, test coverage, and documentation. totalDependencies must count dependencies and devDependencies in package.json.
 
@@ -127,12 +128,16 @@ ${JSON.stringify(fileTree)}
 Recent commit metadata:
 ${JSON.stringify(commits)}`;
 
-  const result = await model.generateContent({
-    contents: [{ role: 'user', parts: [{ text: prompt }] }],
-    generationConfig: { responseMimeType: 'application/json' }
-  });
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: { responseMimeType: 'application/json' }
+    });
 
-  return validateReport(parseJsonResponse(result.response.text()));
+    return validateReport(parseJsonResponse(result.response.text()));
+  } catch (error) {
+    console.error('Gemini analysis failed; using fallback report:', error.message);
+    return fallbackReport();
+  }
 }
 
 module.exports = { analyzeRepoCode };

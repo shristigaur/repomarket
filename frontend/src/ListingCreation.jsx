@@ -46,13 +46,23 @@ export default function ListingCreation() {
   }
 
   async function handlePublish() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Please log in first');
+      return;
+    }
+
     setPublishing(true);
     setMessage(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/listings`, {
+      const response = await fetch('http://localhost:5000/api/listings', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
         body: JSON.stringify({
           repoUrl,
           repoName: analysis.name,

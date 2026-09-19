@@ -7,24 +7,26 @@ function signUser(user) {
 
 async function requireAuth(req, res, next) {
   const header = req.headers.authorization || '';
-  const token = header.startsWith('Bearer ') ? header.slice(7) : null;
+  const bearerToken = header.startsWith('Bearer ') ? header.slice(7).trim() : null;
+  const token = bearerToken || req.cookies?.token;
 
   if (!token) return res.status(401).json({ error: 'Authentication is required.' });
 
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(payload.sub);
-    if (!user) return res.status(401).json({ error: 'Authenticated user no longer exists.' });
-    req.user = user;
+    const decodedUser = await User.findById(payload.sub);
+    if (!decodedUser) return res.status(401).json({ error: 'Authentication is required.' });
+    req.user = decodedUser;
     return next();
   } catch {
-    return res.status(401).json({ error: 'Invalid or expired authentication token.' });
+    return res.status(401).json({ error: 'Authentication is required.' });
   }
 }
 
 async function optionalAuth(req, _res, next) {
   const header = req.headers.authorization || '';
-  const token = header.startsWith('Bearer ') ? header.slice(7) : null;
+  const bearerToken = header.startsWith('Bearer ') ? header.slice(7).trim() : null;
+  const token = bearerToken || req.cookies?.token;
   if (!token) return next();
 
   try {

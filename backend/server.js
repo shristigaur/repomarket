@@ -2,6 +2,7 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const express = require('express');
 const mongoose = require('mongoose');
 const passport = require('passport');
@@ -23,6 +24,7 @@ const port = process.env.PORT || 5000;
 
 app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
 app.use(express.json());
+app.use(cookieParser());
 app.use('/api/assistant', assistantRouter);
 app.use('/api/auth', authRouter);
 configurePassport();
@@ -42,7 +44,7 @@ app.get('/api/auth/google/callback', (req, res, next) => {
   return passport.authenticate('google', { session: false }, (error, user) => {
     if (error || !user) return res.status(401).json({ error: 'Google authentication failed.' });
     const token = signUser(user);
-    return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth/callback?token=${encodeURIComponent(token)}`);
+    return res.redirect(`http://localhost:5173/?token=${encodeURIComponent(token)}`);
   })(req, res, next);
 });
 
@@ -56,7 +58,7 @@ app.get('/api/auth/github/callback', (req, res, next) => {
   return passport.authenticate('github', { session: false }, (error, user) => {
     if (error || !user) return res.status(401).json({ error: 'GitHub authentication failed.' });
     const token = signUser(user);
-    return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth/callback?token=${encodeURIComponent(token)}`);
+    return res.redirect(`http://localhost:5173/?token=${encodeURIComponent(token)}`);
   })(req, res, next);
 });
 
