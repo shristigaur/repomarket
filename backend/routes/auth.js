@@ -3,7 +3,7 @@ const express = require('express');
 const nodemailer = require('nodemailer');
 const passport = require('passport');
 const User = require('../models/User');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, signUser } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -24,6 +24,70 @@ function hashOtp(otp) {
 function generateOtp() {
   return crypto.randomInt(100000, 1000000).toString();
 }
+
+router.post('/signup', async (req, res) => {
+  const fullName = typeof req.body?.fullName === 'string' ? req.body.fullName.trim() : '';
+  const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+  const password = typeof req.body?.password === 'string' ? req.body.password : '';
+
+  if (!fullName || !email || !password) {
+    return res.status(400).json({ error: 'Full name, email, and password are required.' });
+  }
+
+  if (!/^\S+@\S+\.\S+$/.test(email)) {
+    return res.status(400).json({ error: 'Please provide a valid email address.' });
+  }
+
+  if (password.length < 6) {
+    return res.status(400).json({ error: 'Password must be at least 6 characters long.' });
+  }
+
+  try {
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(409).json({ error: 'An account with this email already exists.' });
+    }
+
+    const user = new User({ name: fullName, email, password });
+    await user.save();
+    const token = signUser(user);
+    return res.status(201).json({ token, user: { _id: user._id, name: user.name, email: user.email, avatar: user.avatar } });
+  } catch (error) {
+    console.error('Signup error:', error);
+    return res.status(500).json({ error: 'Failed to create account.' });
+  }
+});
+
+router.post('/login', async (req, res) => {
+  const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+  const password = typeof req.body?.password === 'string' ? req.body.password : '';
+
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password are required.' });
+  }
+
+  try {
+    const user = await User.findOne({ email }).select('+password');
+    if (!user || !user.password) {
+      return res.status(401).json({ error: 'Invalid email or password.' });
+    }
+
+    const isPasswordValid = await user.comparePassword(password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: 'Invalid email or password.' });
+    }
+
+    const token = signUser(user);
+    return res.json({ token, user: { _id: user._id, name: user.name, email: user.email, avatar: user.avatar } });
+  } catch (error) {
+    console.error('Login error:', error);
+    return res.status(500).json({ error: 'Failed to log in.' });
+  }
+});
+
+router.get('/me', requireAuth, async (req, res) => {
+  return res.json({ _id: req.user._id, name: req.user.name, email: req.user.email, avatar: req.user.avatar, isEmailVerified: req.user.isEmailVerified });
+});
 
 router.post('/send-otp', requireAuth, async (req, res) => {
   if (!req.user.email) {
@@ -97,10 +161,22 @@ router.get('/google', passport.authenticate('google', {
   prompt: 'select_account'
 }));
 
+router.get('/google/callback', passport.authenticate('google', { session: false }), (req, res) => {
+  const token = signUser(req.user);
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  res.redirect(`${frontendUrl}?token=${token}`);
+});
+
 router.get('/github', passport.authenticate('github', {
   scope: ['user:email'],
   prompt: 'select_account'
 }));
+
+router.get('/github/callback', passport.authenticate('github', { session: false }), (req, res) => {
+  const token = signUser(req.user);
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  res.redirect(`${frontendUrl}?token=${token}`);
+});
 
 router.post('/logout', (req, res) => {
   res.clearCookie('token');
