@@ -21,7 +21,7 @@ const assistantRouter = require('./routes/assistant');
 const authRouter = require('./routes/auth');
 
 const app = express();
-const port = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5000;
 
 const allowedOrigins = new Set([
   'http://localhost:5173',
@@ -296,8 +296,8 @@ app.post('/api/repos/analyze', async (req, res) => {
 async function startServer() {
   try {
     await connectDatabase();
-    app.listen(port, () => {
-      console.log(`Backend server listening on port ${port}`);
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server running on port ${PORT}`);
     });
   } catch (error) {
     console.error('Database connection failed:', error.message);
