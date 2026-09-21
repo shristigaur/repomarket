@@ -66,7 +66,7 @@
 - [ ] Environment variables set:
 
 ```
-MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/db
+DATABASE_URL=mongodb+srv://user:pass@cluster.mongodb.net/db
 JWT_SECRET=your-super-secret-key-min-32-chars
 FRONTEND_URL=https://your-vercel-domain.vercel.app
 GOOGLE_CLIENT_ID=xxx

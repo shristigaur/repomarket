@@ -1,6 +1,6 @@
 import { useState } from 'react';
+import { apiFetch } from './api';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const initialReport = {
   summary: '',
@@ -42,7 +42,7 @@ function App() {
     setAnalysis(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/repos/analyze`, {
+      const response = await apiFetch('/repos/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: repoUrl })
@@ -62,7 +62,7 @@ function App() {
     setMessage(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/listings`, {
+      const response = await apiFetch('/listings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

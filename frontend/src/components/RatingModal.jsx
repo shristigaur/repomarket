@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Star, X } from 'lucide-react';
-import { API_BASE_URL, authHeaders } from '../auth';
+import { authHeaders } from '../auth';
+import { apiFetch } from '../api';
 
 export default function RatingModal({ listing, revieweeId, revieweeName, onClose, onSubmitted }) {
   const [rating, setRating] = useState(0);
@@ -15,7 +16,7 @@ export default function RatingModal({ listing, revieweeId, revieweeName, onClose
     setSaving(true);
     setError('');
     try {
-      const response = await fetch(`${API_BASE_URL}/ratings`, {
+      const response = await apiFetch('/ratings', {
         method: 'POST',
         headers: { ...authHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ listingId: listing._id, revieweeId, rating, comment })

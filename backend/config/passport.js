@@ -17,11 +17,14 @@ async function upsertUser({ provider, profile }) {
 }
 
 function configurePassport() {
+  const backendUrl = (process.env.BACKEND_URL || 'http://localhost:5000').replace(/\/$/, '');
+
   if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
     passport.use(new GoogleStrategy({
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:5000/api/auth/google/callback'
+      // Must exactly match the URI registered in Google Cloud Console.
+      callbackURL: `${backendUrl}/api/auth/google/callback`
     }, async (_accessToken, _refreshToken, profile, done) => {
       try { return done(null, await upsertUser({ provider: 'google', profile })); } catch (error) { return done(error); }
     }));
@@ -31,7 +34,8 @@ function configurePassport() {
     passport.use(new GitHubStrategy({
       clientID: process.env.GITHUB_CLIENT_ID,
       clientSecret: process.env.GITHUB_CLIENT_SECRET,
-      callbackURL: process.env.GITHUB_CALLBACK_URL || 'http://localhost:5000/api/auth/github/callback'
+      // Must exactly match the URI registered in GitHub OAuth App settings.
+      callbackURL: `${backendUrl}/api/auth/github/callback`
     }, async (_accessToken, _refreshToken, profile, done) => {
       try { return done(null, await upsertUser({ provider: 'github', profile })); } catch (error) { return done(error); }
     }));

@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { AlertTriangle, Check, ExternalLink, ShieldAlert } from 'lucide-react';
 import Navbar from './components/Navbar';
 import RatingModal from './components/RatingModal';
-import { API_BASE_URL, authHeaders, useAuth } from './auth';
+import { useAuth } from './auth';
+import { apiFetch } from './api';
 
 function formatPrice(value) {
   return `$${Number(value || 0).toLocaleString()}`;
@@ -23,8 +24,8 @@ export default function MyListings() {
       return undefined;
     }
     Promise.all([
-      fetch(`${API_BASE_URL}/listings/mine`, { headers: authHeaders() }),
-      fetch(`${API_BASE_URL}/listings/purchases`, { headers: authHeaders() })
+      apiFetch('/listings/mine'),
+      apiFetch('/listings/purchases')
     ])
       .then(async ([listingResponse, purchaseResponse]) => {
         const [listingData, purchaseData] = await Promise.all([listingResponse.json(), purchaseResponse.json()]);
@@ -40,7 +41,7 @@ export default function MyListings() {
 
   async function withdrawListing() {
     try {
-      const response = await fetch(`${API_BASE_URL}/listings/${withdrawTarget._id}/withdraw`, { method: 'PATCH', headers: authHeaders() });
+      const response = await apiFetch(`/listings/${withdrawTarget._id}/withdraw`, { method: 'PATCH' });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Unable to withdraw listing.');
       setListings((current) => current.map((listing) => listing._id === data._id ? data : listing));

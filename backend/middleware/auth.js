@@ -6,9 +6,8 @@ function signUser(user) {
 }
 
 async function requireAuth(req, res, next) {
-  const header = req.headers.authorization || '';
-  const bearerToken = header.startsWith('Bearer ') ? header.slice(7).trim() : null;
-  const token = bearerToken || req.cookies?.token;
+  // The browser never receives this JWT; it only sends the httpOnly cookie.
+  const token = req.cookies?.token;
 
   if (!token) return res.status(401).json({ error: 'Authentication is required.' });
 
@@ -24,9 +23,7 @@ async function requireAuth(req, res, next) {
 }
 
 async function optionalAuth(req, _res, next) {
-  const header = req.headers.authorization || '';
-  const bearerToken = header.startsWith('Bearer ') ? header.slice(7).trim() : null;
-  const token = bearerToken || req.cookies?.token;
+  const token = req.cookies?.token;
   if (!token) return next();
 
   try {

@@ -281,7 +281,7 @@
 | OAuth redirect fails | Check callback URLs in OAuth provider settings |
 | Token not persisting | Check localStorage is enabled, token is being set |
 | CORS errors | Check backend CORS is configured for frontend domain |
-| MongoDB connection fails | Check MONGODB_URI in .env, IP whitelist in Atlas |
+| MongoDB connection fails | Check DATABASE_URL in .env, IP whitelist in Atlas |
 | "Authentication is required" | Check token is in localStorage, not expired |
 
 ---

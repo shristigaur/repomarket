@@ -1,6 +1,7 @@
 import React from 'react';
 import { GitBranch, LogOut, UserRound } from 'lucide-react';
-import { API_BASE_URL, useAuth } from '../auth';
+import { useAuth } from '../auth';
+import { API_URL } from '../api';
 import OTPVerificationModal from './OTPVerificationModal';
 
 export default function Navbar({ actionHref = '/create', actionLabel = 'List a repository' }) {
@@ -25,8 +26,8 @@ export default function Navbar({ actionHref = '/create', actionLabel = 'List a r
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <a className="flex items-center gap-1.5 border border-[#cbd1c8] px-2.5 py-2 font-mono text-[9px] uppercase tracking-[.05em] text-moss transition hover:border-moss hover:bg-sage" href={`${API_BASE_URL}/auth/google`}><span className="font-bold">G</span><span className="hidden sm:inline">Sign in with Google</span><span className="sm:hidden">Google</span></a>
-              <a className="flex items-center gap-1.5 border border-[#cbd1c8] px-2.5 py-2 font-mono text-[9px] uppercase tracking-[.05em] text-moss transition hover:border-moss hover:bg-sage" href={`${API_BASE_URL}/auth/github`}><GitBranch size={13} /><span className="hidden sm:inline">Sign in with GitHub</span><span className="sm:hidden">GitHub</span></a>
+              <a className="flex items-center gap-1.5 border border-[#cbd1c8] px-2.5 py-2 font-mono text-[9px] uppercase tracking-[.05em] text-moss transition hover:border-moss hover:bg-sage" href={`${API_URL}/api/auth/google`}><span className="font-bold">G</span><span className="hidden sm:inline">Sign in with Google</span><span className="sm:hidden">Google</span></a>
+              <a className="flex items-center gap-1.5 border border-[#cbd1c8] px-2.5 py-2 font-mono text-[9px] uppercase tracking-[.05em] text-moss transition hover:border-moss hover:bg-sage" href={`${API_URL}/api/auth/github`}><GitBranch size={13} /><span className="hidden sm:inline">Sign in with GitHub</span><span className="sm:hidden">GitHub</span></a>
             </div>
           )}
         </div>

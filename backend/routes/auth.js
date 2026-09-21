@@ -7,6 +7,27 @@ const { requireAuth, signUser } = require('../middleware/auth');
 
 const router = express.Router();
 
+const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
+
+function redirectAfterOAuth(res, user) {
+  const token = signUser(user);
+  setAuthCookie(res, token);
+  // Do not put a JWT in the URL: URLs can leak through browser history and logs.
+  return res.redirect(frontendUrl);
+}
+
+const authCookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+  path: '/'
+};
+
+function setAuthCookie(res, token) {
+  res.cookie('token', token, authCookieOptions);
+}
+
 function createTransporter() {
   return nodemailer.createTransport({
     service: 'gmail',
@@ -50,8 +71,8 @@ router.post('/signup', async (req, res) => {
 
     const user = new User({ name: fullName, email, password });
     await user.save();
-    const token = signUser(user);
-    return res.status(201).json({ token, user: { _id: user._id, name: user.name, email: user.email, avatar: user.avatar } });
+    setAuthCookie(res, signUser(user));
+    return res.status(201).json({ user: { _id: user._id, name: user.name, email: user.email, avatar: user.avatar } });
   } catch (error) {
     console.error('Signup error:', error);
     return res.status(500).json({ error: 'Failed to create account.' });
@@ -77,8 +98,8 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password.' });
     }
 
-    const token = signUser(user);
-    return res.json({ token, user: { _id: user._id, name: user.name, email: user.email, avatar: user.avatar } });
+    setAuthCookie(res, signUser(user));
+    return res.json({ user: { _id: user._id, name: user.name, email: user.email, avatar: user.avatar } });
   } catch (error) {
     console.error('Login error:', error);
     return res.status(500).json({ error: 'Failed to log in.' });
@@ -156,30 +177,40 @@ router.post('/verify-otp', requireAuth, async (req, res) => {
   return res.json({ message: 'Email verified successfully.', isEmailVerified: true });
 });
 
-router.get('/google', passport.authenticate('google', {
-  scope: ['profile', 'email'],
-  prompt: 'select_account'
-}));
+function oauthUnavailable(res, provider) {
+  return res.status(503).json({ error: `${provider} OAuth is not configured on the server.` });
+}
 
-router.get('/google/callback', passport.authenticate('google', { session: false }), (req, res) => {
-  const token = signUser(req.user);
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-  res.redirect(`${frontendUrl}?token=${token}`);
+router.get('/google', (req, res, next) => {
+  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) return oauthUnavailable(res, 'Google');
+  // Passport stores a cryptographically random state in the server session and validates it on callback.
+  return passport.authenticate('google', { scope: ['profile', 'email'], prompt: 'select_account', state: true, session: false })(req, res, next);
 });
 
-router.get('/github', passport.authenticate('github', {
-  scope: ['user:email'],
-  prompt: 'select_account'
-}));
+router.get('/google/callback', (req, res, next) => {
+  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) return oauthUnavailable(res, 'Google');
+  return passport.authenticate('google', { session: false }, (error, user) => {
+    if (error || !user) return res.status(401).json({ error: 'Google authentication failed.' });
+    return redirectAfterOAuth(res, user);
+  })(req, res, next);
+});
 
-router.get('/github/callback', passport.authenticate('github', { session: false }), (req, res) => {
-  const token = signUser(req.user);
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-  res.redirect(`${frontendUrl}?token=${token}`);
+router.get('/github', (req, res, next) => {
+  if (!process.env.GITHUB_CLIENT_ID || !process.env.GITHUB_CLIENT_SECRET) return oauthUnavailable(res, 'GitHub');
+  return passport.authenticate('github', { scope: ['user:email'], state: true, session: false })(req, res, next);
+});
+
+router.get('/github/callback', (req, res, next) => {
+  if (!process.env.GITHUB_CLIENT_ID || !process.env.GITHUB_CLIENT_SECRET) return oauthUnavailable(res, 'GitHub');
+  return passport.authenticate('github', { session: false }, (error, user) => {
+    if (error || !user) return res.status(401).json({ error: 'GitHub authentication failed.' });
+    return redirectAfterOAuth(res, user);
+  })(req, res, next);
 });
 
 router.post('/logout', (req, res) => {
-  res.clearCookie('token');
+  res.clearCookie('token', { ...authCookieOptions, maxAge: undefined });
+  req.session?.destroy(() => {});
   return res.json({ message: 'Logged out successfully' });
 });
 

@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Navbar from './components/Navbar';
 import AIAssistantModal from './components/AIAssistantModal';
+import { apiFetch } from './api';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 function scoreTone(score) {
   if (score > 70) return 'bg-[#b9d9c4] text-[#21563e]';
@@ -27,7 +27,7 @@ function App() {
 
     async function loadListings() {
       try {
-        const response = await fetch(`${API_BASE_URL}/listings`);
+        const response = await apiFetch('/listings');
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Unable to load marketplace listings.');
         if (active) setListings(Array.isArray(data) ? data : []);

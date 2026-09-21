@@ -3,10 +3,11 @@ dotenv.config();
 
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
+const session = require('express-session');
+const MongoStore = require('connect-mongo');
 const express = require('express');
 const mongoose = require('mongoose');
 const passport = require('passport');
-const jwt = require('jsonwebtoken');
 const { getRepoDetails } = require('./services/githubService');
 const { analyzeRepoCode } = require('./services/aiService');
 const { connectDatabase } = require('./config/database');
@@ -14,7 +15,7 @@ const Listing = require('./models/Listing');
 const User = require('./models/User');
 const Rating = require('./models/Rating');
 const { configurePassport } = require('./config/passport');
-const { requireAuth, optionalAuth, signUser } = require('./middleware/auth');
+const { requireAuth, optionalAuth } = require('./middleware/auth');
 const { requireEmailVerified } = require('./middleware/requireEmailVerified');
 const assistantRouter = require('./routes/assistant');
 const authRouter = require('./routes/auth');
@@ -22,47 +23,41 @@ const authRouter = require('./routes/auth');
 const app = express();
 const port = process.env.PORT || 5000;
 
-app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
+const allowedOrigins = new Set([
+  'http://localhost:5173',
+  process.env.FRONTEND_URL
+].filter(Boolean).map((origin) => origin.replace(/\/$/, '')));
+
+if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1);
+
+app.use(cors({
+  // Credentials require a specific matching origin; `*` would make browsers reject cookies.
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.has(origin)) return callback(null, true);
+    return callback(new Error('Origin is not allowed by CORS.'));
+  },
+  credentials: true
+}));
 app.use(express.json());
 app.use(cookieParser());
-app.use('/api/assistant', assistantRouter);
-app.use('/api/auth', authRouter);
+app.use(session({
+  name: 'oauth_state',
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  // Persist Passport's OAuth state outside process memory so restarts and multiple instances work.
+  store: MongoStore.create({ mongoUrl: process.env.DATABASE_URL }),
+  cookie: {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    maxAge: 10 * 60 * 1000
+  }
+}));
 configurePassport();
 app.use(passport.initialize());
-
-function oauthUnavailable(res, provider) {
-  return res.status(503).json({ error: `${provider} OAuth is not configured on the server.` });
-}
-
-app.get('/api/auth/google', (req, res, next) => {
-  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) return oauthUnavailable(res, 'Google');
-  return passport.authenticate('google', { scope: ['profile', 'email'], session: false })(req, res, next);
-});
-
-app.get('/api/auth/google/callback', (req, res, next) => {
-  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) return oauthUnavailable(res, 'Google');
-  return passport.authenticate('google', { session: false }, (error, user) => {
-    if (error || !user) return res.status(401).json({ error: 'Google authentication failed.' });
-    const token = signUser(user);
-    return res.redirect(`http://localhost:5173/?token=${encodeURIComponent(token)}`);
-  })(req, res, next);
-});
-
-app.get('/api/auth/github', (req, res, next) => {
-  if (!process.env.GITHUB_CLIENT_ID || !process.env.GITHUB_CLIENT_SECRET) return oauthUnavailable(res, 'GitHub');
-  return passport.authenticate('github', { scope: ['user:email'], session: false })(req, res, next);
-});
-
-app.get('/api/auth/github/callback', (req, res, next) => {
-  if (!process.env.GITHUB_CLIENT_ID || !process.env.GITHUB_CLIENT_SECRET) return oauthUnavailable(res, 'GitHub');
-  return passport.authenticate('github', { session: false }, (error, user) => {
-    if (error || !user) return res.status(401).json({ error: 'GitHub authentication failed.' });
-    const token = signUser(user);
-    return res.redirect(`http://localhost:5173/?token=${encodeURIComponent(token)}`);
-  })(req, res, next);
-});
-
-app.get('/api/auth/me', requireAuth, (req, res) => res.json(req.user));
+app.use('/api/assistant', assistantRouter);
+app.use('/api/auth', authRouter);
 
 function calculateMarketRate(score) {
   const normalizedScore = Math.min(100, Math.max(1, Number(score) || 1));

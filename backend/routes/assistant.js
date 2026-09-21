@@ -52,9 +52,15 @@ router.post('/chat', async (req, res) => {
     });
     const result = await model.generateContent({
       contents: [...history, { role: 'user', parts: [{ text: message }] }],
-      generationConfig: { maxOutputTokens: 512 }
+      generationConfig: { maxOutputTokens: 2048 }
     });
-    const textResponse = result.response.text().trim();
+    // Await the complete model response before serializing JSON to the browser.
+    const geminiResponse = await result.response;
+    const textResponse = (await geminiResponse.text()).trim();
+
+    if (!textResponse) {
+      throw new Error('The assistant returned an empty response. Please try again.');
+    }
 
     console.log('Sending response to frontend:', textResponse);
     return res.status(200).json({ reply: textResponse });

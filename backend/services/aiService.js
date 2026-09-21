@@ -130,10 +130,16 @@ ${JSON.stringify(commits)}`;
 
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: { responseMimeType: 'application/json' }
+      generationConfig: {
+        responseMimeType: 'application/json',
+        maxOutputTokens: 2048
+      }
     });
 
-    return validateReport(parseJsonResponse(result.response.text()));
+    // Resolve both SDK promises before parsing; this prevents reading a partial response object.
+    const response = await result.response;
+    const responseText = await response.text();
+    return validateReport(parseJsonResponse(responseText));
   } catch (error) {
     console.error('Gemini analysis failed; using fallback report:', error.message);
     return fallbackReport();

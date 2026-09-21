@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { GitBranch, User, Mail, Lock, Loader } from 'lucide-react';
+import { API_URL, apiFetch } from '../api';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 export default function Signup() {
   const [fullName, setFullName] = useState('');
@@ -16,7 +16,7 @@ export default function Signup() {
     setLoading(true);
 
     try {
-      const response = await fetch(`${API_URL}/auth/signup`, {
+      const response = await apiFetch('/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fullName, email, password })
@@ -25,7 +25,6 @@ export default function Signup() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Signup failed');
 
-      localStorage.setItem('token', data.token);
       window.location.href = '/';
     } catch (err) {
       setError(err.message);
@@ -112,14 +111,14 @@ export default function Signup() {
 
         <div className="space-y-3 mb-6">
           <a
-            href={`${API_URL}/auth/google`}
+            href={`${API_URL}/api/auth/google`}
             className="w-full flex items-center justify-center gap-2 border border-[#cbd1c8] px-4 py-2.5 rounded-lg text-moss font-medium transition hover:bg-sage"
           >
             <span className="font-bold">G</span>
             Google
           </a>
           <a
-            href={`${API_URL}/auth/github`}
+            href={`${API_URL}/api/auth/github`}
             className="w-full flex items-center justify-center gap-2 border border-[#cbd1c8] px-4 py-2.5 rounded-lg text-moss font-medium transition hover:bg-sage"
           >
             <GitBranch size={18} />

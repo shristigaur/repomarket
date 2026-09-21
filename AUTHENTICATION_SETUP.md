@@ -18,7 +18,7 @@ Add these to your backend `.env` file:
 
 ```env
 # Database
-MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/<database>
+DATABASE_URL=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/<database>
 
 # JWT
 JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
@@ -212,7 +212,7 @@ npm run dev
 2. Connect Render to GitHub repo
 3. Create new Web Service
 4. Set environment variables in Render dashboard:
-   - `MONGODB_URI`
+   - `DATABASE_URL`
    - `JWT_SECRET`
    - `FRONTEND_URL` (your Vercel domain)
    - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_CALLBACK_URL`

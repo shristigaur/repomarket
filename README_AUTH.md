@@ -66,7 +66,7 @@ cp backend/.env.example backend/.env
 
 Edit `backend/.env` with your values:
 ```env
-MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/db
+DATABASE_URL=mongodb+srv://user:pass@cluster.mongodb.net/db
 JWT_SECRET=your-super-secret-key-min-32-chars
 FRONTEND_URL=http://localhost:5173
 GOOGLE_CLIENT_ID=xxx
@@ -274,7 +274,7 @@ curl -X GET http://localhost:5000/api/auth/me \
 3. Create Web Service
 4. Set environment variables:
    ```
-   MONGODB_URI=...
+   DATABASE_URL=...
    JWT_SECRET=...
    FRONTEND_URL=https://your-vercel-domain.vercel.app
    GOOGLE_CLIENT_ID=...

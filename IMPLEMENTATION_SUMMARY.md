@@ -175,7 +175,7 @@ npm install bcryptjs
 
 **Backend (.env):**
 ```env
-MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/db
+DATABASE_URL=mongodb+srv://user:pass@cluster.mongodb.net/db
 JWT_SECRET=your-super-secret-key-min-32-chars
 FRONTEND_URL=http://localhost:5173
 GOOGLE_CLIENT_ID=xxx

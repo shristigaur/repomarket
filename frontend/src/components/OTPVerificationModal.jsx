@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { CheckCircle2, Clock3, Mail, RefreshCw, ShieldCheck, X } from 'lucide-react';
-import { API_BASE_URL, authHeaders } from '../auth';
+import { authHeaders } from '../auth';
+import { apiFetch } from '../api';
 
 function Toast({ toast, onClose }) {
   if (!toast) return null;
@@ -28,7 +29,7 @@ export default function OTPVerificationModal({ user }) {
   async function sendOtp() {
     setSending(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/send-otp`, { method: 'POST', headers: authHeaders() });
+      const response = await apiFetch('/auth/send-otp', { method: 'POST', headers: authHeaders() });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Unable to send verification code.');
       setSecondsLeft(60);
@@ -49,7 +50,7 @@ export default function OTPVerificationModal({ user }) {
 
     setVerifying(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
+      const response = await apiFetch('/auth/verify-otp', {
         method: 'POST',
         headers: { ...authHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: user.email, otp })

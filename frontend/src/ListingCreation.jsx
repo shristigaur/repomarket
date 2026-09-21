@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import Navbar from './components/Navbar';
 import AIAssistantModal from './components/AIAssistantModal';
+import { apiFetch } from './api';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 function scoreTone(score) {
   if (score > 70) return 'bg-[#b9d9c4] text-[#21563e]';
@@ -30,7 +30,7 @@ export default function ListingCreation() {
     setAnalysis(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/repos/analyze`, {
+      const response = await apiFetch('/repos/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ repoUrl })
@@ -46,22 +46,14 @@ export default function ListingCreation() {
   }
 
   async function handlePublish() {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      alert('Please log in first');
-      return;
-    }
-
     setPublishing(true);
     setMessage(null);
 
     try {
-      const response = await fetch('http://localhost:5000/api/listings', {
+      const response = await apiFetch('/listings', {
         method: 'POST',
-        credentials: 'include',
         headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           repoUrl,
