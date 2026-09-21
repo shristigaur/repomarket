@@ -2,7 +2,6 @@ const nodemailer = require('nodemailer');
 
 function getEmailCredentials() {
   const user = (process.env.EMAIL_USER || '').trim();
-  // Google displays app passwords in groups; SMTP must receive the contiguous value.
   const pass = process.env.EMAIL_PASS ? process.env.EMAIL_PASS.replace(/\s+/g, '') : '';
 
   if (!user || !pass) {
@@ -17,12 +16,17 @@ function createTransporter() {
 
   return nodemailer.createTransport({
     host: 'smtp.gmail.com',
-    port: 465,
-    secure: true,
+    port: 587,              // 👈 Port 587 uses STARTTLS (Render par blocked nahi hota)
+    secure: false,         // Port 587 ke liye false hona chahiye
+    family: 4,             // 👈 IPv4 force karein (ENETUNREACH IPv6 issue fix ke liye)
     auth: { user, pass },
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 10000
+    tls: {
+      rejectUnauthorized: false, // TLS Handshake drop hone se roktar hai
+      ciphers: 'SSLv3'
+    },
+    connectionTimeout: 30000, // 30 seconds connection allowance
+    greetingTimeout: 30000,
+    socketTimeout: 30000,
   });
 }
 
