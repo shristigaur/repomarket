@@ -36,10 +36,13 @@ app.use(cors({
     if (!origin || allowedOrigins.has(origin)) return callback(null, true);
     return callback(new Error('Origin is not allowed by CORS.'));
   },
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 app.use(cookieParser());
+app.get('/health', (_req, res) => res.status(200).json({ success: true, status: 'ok' }));
 app.use(session({
   name: 'oauth_state',
   secret: process.env.SESSION_SECRET,

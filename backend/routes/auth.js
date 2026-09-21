@@ -1,9 +1,8 @@
-const crypto = require('crypto');
 const express = require('express');
 const passport = require('passport');
 const User = require('../models/User');
 const { requireAuth, signUser } = require('../middleware/auth');
-const { sendOtp } = require('../controllers/authController');
+const { sendOTP, verifyOTP } = require('../controllers/authController');
 
 const router = express.Router();
 
@@ -26,10 +25,6 @@ const authCookieOptions = {
 
 function setAuthCookie(res, token) {
   res.cookie('token', token, authCookieOptions);
-}
-
-function hashOtp(otp) {
-  return crypto.createHash('sha256').update(otp).digest('hex');
 }
 
 router.post('/signup', async (req, res) => {
@@ -96,37 +91,8 @@ router.get('/me', requireAuth, async (req, res) => {
   return res.json({ _id: req.user._id, name: req.user.name, email: req.user.email, avatar: req.user.avatar, isEmailVerified: req.user.isEmailVerified });
 });
 
-router.post('/send-otp', requireAuth, sendOtp);
-
-router.post('/verify-otp', requireAuth, async (req, res) => {
-  const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
-  const otp = typeof req.body?.otp === 'string' ? req.body.otp.trim() : '';
-
-  if (!email || !/^\d{6}$/.test(otp)) {
-    return res.status(400).json({ error: 'A valid email and 6-digit OTP are required.' });
-  }
-
-  if (!req.user.email || req.user.email !== email) {
-    return res.status(403).json({ error: 'The verification email must match the authenticated account.' });
-  }
-
-  const user = await User.findById(req.user._id).select('+emailOtp +otpExpiresAt');
-  if (!user || !user.emailOtp || !user.otpExpiresAt || user.otpExpiresAt.getTime() <= Date.now()) {
-    return res.status(400).json({ error: 'This verification code is missing or expired.' });
-  }
-
-  const expectedHash = Buffer.from(user.emailOtp, 'hex');
-  const providedHash = Buffer.from(hashOtp(otp), 'hex');
-  if (expectedHash.length !== providedHash.length || !crypto.timingSafeEqual(expectedHash, providedHash)) {
-    return res.status(400).json({ error: 'The verification code is incorrect.' });
-  }
-
-  user.isEmailVerified = true;
-  user.emailOtp = undefined;
-  user.otpExpiresAt = undefined;
-  await user.save();
-  return res.json({ message: 'Email verified successfully.', isEmailVerified: true });
-});
+router.post('/send-otp', requireAuth, sendOTP);
+router.post('/verify-otp', requireAuth, verifyOTP);
 
 function oauthUnavailable(res, provider) {
   return res.status(503).json({ error: `${provider} OAuth is not configured on the server.` });
