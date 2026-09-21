@@ -22,7 +22,6 @@ function createTransporter() {
     auth: { user, pass },
     tls: {
       rejectUnauthorized: false, // TLS Handshake drop hone se roktar hai
-      ciphers: 'SSLv3'
     },
     connectionTimeout: 30000, // 30 seconds connection allowance
     greetingTimeout: 30000,
