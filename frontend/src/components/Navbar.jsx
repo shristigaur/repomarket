@@ -3,7 +3,7 @@ import { GitBranch, LogOut, UserRound } from 'lucide-react';
 import { useAuth } from '../auth';
 import { API_URL } from '../api';
 
-export default function Navbar({ actionHref = '/create', actionLabel = 'List a repository' }) {
+export default function Navbar({ actionHref = '/my-listings', actionLabel = 'List a repository' }) {
   const { user, signOut } = useAuth();
 
   return (
