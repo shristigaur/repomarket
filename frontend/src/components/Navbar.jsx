@@ -2,12 +2,11 @@ import React from 'react';
 import { GitBranch, LogOut, UserRound } from 'lucide-react';
 import { useAuth } from '../auth';
 import { API_URL } from '../api';
-import OTPVerificationModal from './OTPVerificationModal';
 
 export default function Navbar({ actionHref = '/create', actionLabel = 'List a repository' }) {
   const { user, signOut } = useAuth();
 
-  return <>
+  return (
     <nav className="border-b border-[#d8d9d0] bg-paper/95 px-[5vw] backdrop-blur">
       <div className="mx-auto flex min-h-[76px] max-w-[1320px] flex-wrap items-center justify-between gap-4 py-3">
         <a className="flex items-center gap-3 font-display text-[17px] font-bold text-ink no-underline" href="/">
@@ -33,6 +32,5 @@ export default function Navbar({ actionHref = '/create', actionLabel = 'List a r
         </div>
       </div>
     </nav>
-    {user && !user.isEmailVerified && <OTPVerificationModal user={user} />}
-  </>;
+  );
 }
