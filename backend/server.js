@@ -3,8 +3,6 @@ dotenv.config();
 
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
-const session = require('express-session');
-const MongoStore = require('connect-mongo');
 const express = require('express');
 const mongoose = require('mongoose');
 const passport = require('passport');
@@ -16,7 +14,6 @@ const User = require('./models/User');
 const Rating = require('./models/Rating');
 const { configurePassport } = require('./config/passport');
 const { requireAuth, optionalAuth } = require('./middleware/auth');
-const { requireEmailVerified } = require('./middleware/requireEmailVerified');
 const assistantRouter = require('./routes/assistant');
 const authRouter = require('./routes/auth');
 
@@ -43,20 +40,6 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 app.get('/health', (_req, res) => res.status(200).json({ success: true, status: 'ok' }));
-app.use(session({
-  name: 'oauth_state',
-  secret: process.env.SESSION_SECRET,
-  resave: false,
-  saveUninitialized: false,
-  // Persist Passport's OAuth state outside process memory so restarts and multiple instances work.
-  store: MongoStore.create({ mongoUrl: process.env.DATABASE_URL }),
-  cookie: {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    maxAge: 10 * 60 * 1000
-  }
-}));
 configurePassport();
 app.use(passport.initialize());
 app.use('/api/assistant', assistantRouter);
@@ -67,7 +50,7 @@ function calculateMarketRate(score) {
   return Math.max(100, Math.round((normalizedScore * 50) / 50) * 50);
 }
 
-app.post('/api/listings', requireAuth, requireEmailVerified, async (req, res) => {
+app.post('/api/listings', requireAuth, async (req, res) => {
   try {
     const { repoUrl, repoName, price, sellerEmail, aiReport } = req.body || {};
     if (!aiReport || typeof aiReport.codeHealthScore !== 'number') {
@@ -98,7 +81,7 @@ app.post('/api/listings', requireAuth, requireEmailVerified, async (req, res) =>
   }
 });
 
-app.patch('/api/listings/:id/complete', requireAuth, requireEmailVerified, async (req, res) => {
+app.patch('/api/listings/:id/complete', requireAuth, async (req, res) => {
   try {
     const { buyerId } = req.body || {};
     const listing = await Listing.findById(req.params.id);
@@ -121,7 +104,7 @@ app.patch('/api/listings/:id/complete', requireAuth, requireEmailVerified, async
   }
 });
 
-app.post('/api/listings/:id/purchase', requireAuth, requireEmailVerified, async (req, res) => {
+app.post('/api/listings/:id/purchase', requireAuth, async (req, res) => {
   try {
     const listing = await Listing.findById(req.params.id);
     if (!listing) return res.status(404).json({ error: 'Listing not found.' });
