@@ -28,8 +28,10 @@ function App() {
     async function loadListings() {
       try {
         const response = await apiFetch('/listings');
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Unable to load marketplace listings.');
         if (active) setListings(Array.isArray(data) ? data : []);
       } catch (requestError) {
         if (active) setError(requestError.message);

@@ -16,22 +16,24 @@ const { configurePassport } = require('./config/passport');
 const { requireAuth, optionalAuth } = require('./middleware/auth');
 const assistantRouter = require('./routes/assistant');
 const authRouter = require('./routes/auth');
+const listingsRouter = require('./routes/listings');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-const allowedOrigins = new Set([
+const allowedOrigins = [
   'http://localhost:5173',
-  process.env.FRONTEND_URL
-].filter(Boolean).map((origin) => origin.replace(/\/$/, '')));
-
-if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1);
+  'http://localhost:3000',
+  'https://repo-market.vercel.app'
+];
 
 app.use(cors({
-  // Credentials require a specific matching origin; `*` would make browsers reject cookies.
-  origin(origin, callback) {
-    if (!origin || allowedOrigins.has(origin)) return callback(null, true);
-    return callback(new Error('Origin is not allowed by CORS.'));
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
   },
   credentials: true,
   methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
@@ -44,6 +46,8 @@ configurePassport();
 app.use(passport.initialize());
 app.use('/api/assistant', assistantRouter);
 app.use('/api/auth', authRouter);
+app.use('/api/listings', listingsRouter);
+
 
 function calculateMarketRate(score) {
   const normalizedScore = Math.min(100, Math.max(1, Number(score) || 1));
@@ -277,6 +281,11 @@ app.post('/api/repos/analyze', async (req, res) => {
       error: errorMessage
     });
   }
+});
+
+// Fallback JSON response for unknown /api routes to prevent HTML returns
+app.use('/api', (req, res) => {
+  res.status(404).json({ error: 'Endpoint not found' });
 });
 
 async function startServer() {

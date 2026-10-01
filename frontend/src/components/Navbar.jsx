@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { GitBranch, LogOut, UserRound } from 'lucide-react';
 import { useAuth } from '../auth';
 import { API_URL } from '../api';
+import ListRepoModal from './ListRepoModal';
 
 export default function Navbar({ actionHref = '/my-listings', actionLabel = 'List a repository' }) {
   const { user, signOut } = useAuth();

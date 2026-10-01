@@ -6,19 +6,39 @@ function signUser(user) {
 }
 
 async function requireAuth(req, res, next) {
-  // The browser never receives this JWT; it only sends the httpOnly cookie.
-  const token = req.cookies?.token;
+  // Support both cookies and Authorization header
+  let token = req.cookies?.token;
+  if (!token && req.headers.authorization?.startsWith('Bearer ')) {
+    token = req.headers.authorization.split(' ')[1];
+  }
 
-  if (!token) return res.status(401).json({ error: 'Authentication is required.' });
+  // Support fallback query param as requested
+  if (!token && req.query.userId) {
+    try {
+      const decodedUser = await User.findById(req.query.userId);
+      if (decodedUser) {
+        req.user = decodedUser;
+        return next();
+      }
+    } catch (error) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID format' });
+    }
+  }
+
+  if (!token) {
+    return res.status(400).json({ success: false, message: 'Missing authorization token or user ID' });
+  }
 
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
     const decodedUser = await User.findById(payload.sub);
-    if (!decodedUser) return res.status(401).json({ error: 'Authentication is required.' });
+    if (!decodedUser) {
+      return res.status(400).json({ success: false, message: 'Invalid authorization token or user ID' });
+    }
     req.user = decodedUser;
     return next();
-  } catch {
-    return res.status(401).json({ error: 'Authentication is required.' });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: 'Invalid or expired token' });
   }
 }
 

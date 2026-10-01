@@ -47,8 +47,10 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: repoUrl })
       });
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Unable to analyze this repository.');
       setAnalysis(data);
     } catch (error) {
       setMessage({ type: 'error', text: error.message });
@@ -73,8 +75,10 @@ function App() {
           aiReport: analysis.aiReport
         })
       });
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Unable to publish this listing.');
       setMessage({ type: 'success', text: 'Listing published. Your repository is now ready for buyers.' });
     } catch (error) {
       setMessage({ type: 'error', text: error.message });

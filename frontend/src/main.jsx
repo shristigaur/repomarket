@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import App from './MarketplaceDashboard';
 import MyListings from './MyListings';
 import AuthCallback from './AuthCallback';
+import ListingCreation from './ListingCreation';
 import Login from './components/Login';
 import Signup from './components/Signup';
 import './styles.css';
@@ -13,9 +14,11 @@ const Page = window.location.pathname === '/login'
     ? Signup
     : window.location.pathname === '/my-listings'
       ? MyListings
-      : window.location.pathname === '/auth/callback'
-        ? AuthCallback
-        : App;
+      : window.location.pathname === '/listings/create'
+        ? ListingCreation
+        : window.location.pathname === '/auth/callback'
+          ? AuthCallback
+          : App;
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
