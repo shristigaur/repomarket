@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const ListingSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  buyerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   repoUrl: { type: String, required: true },
   repoName: { type: String },
   description: { type: String },

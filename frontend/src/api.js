@@ -1,11 +1,6 @@
-// Keep the backend origin in an environment variable; secrets never belong in Vite variables.
-export const API_URL = import.meta.env.VITE_API_URL;
-
-if (!API_URL) {
-  throw new Error('VITE_API_URL must be set to the backend origin.');
-}
-
-export const API_BASE_URL = `${API_URL.replace(/\/$/, '')}/api`;
+// Vercel supplies VITE_API_URL; the fallback keeps preview builds usable.
+export const API_URL = (import.meta.env.VITE_API_URL || 'https://repomarket.onrender.com').replace(/\/$/, '');
+export const API_BASE_URL = `${API_URL}/api`;
 
 // Every API request sends the httpOnly authentication cookie. JavaScript cannot read it.
 export function apiFetch(path, options = {}) {

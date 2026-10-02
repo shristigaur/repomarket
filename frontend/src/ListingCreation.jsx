@@ -30,8 +30,7 @@ export default function ListingCreation() {
     setAnalysis(null);
 
     try {
-      const API_URL = import.meta.env.VITE_API_URL || 'https://repomarket.onrender.com';
-      const response = await fetch(`${API_URL}/api/listings/analyze`, {
+      const response = await apiFetch('/listings/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ repoUrl, userPrice: Number(price) || 0 })
@@ -54,6 +53,7 @@ export default function ListingCreation() {
       const repoName = urlParts[urlParts.length - 1] || 'Untitled Repository';
       setAnalysis({ ...data, repoUrl, repoName });
     } catch (error) {
+      console.error('Repository analysis failed:', error.message);
       setMessage({ type: 'error', text: error.message });
     } finally {
       setLoading(false);

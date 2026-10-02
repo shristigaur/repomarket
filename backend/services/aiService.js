@@ -10,6 +10,23 @@ const reportKeys = [
   'riskAndSecurity'
 ];
 
+const audienceGuidance = {
+  children: 'Use simple words, playful language, short sentences, and fun analogies suitable for children.',
+  teenage: 'Use a casual, relatable tone with modern technology terms and practical explanations suitable for teenagers.',
+  adult: 'Use a professional, concise, actionable, and structured tone similar to a Copilot response.',
+  man: 'Use a professional, concise, actionable, and structured tone similar to a Copilot response.',
+  oldage: 'Use a warm and respectful tone, ultra-clear formatting, and avoid overly complex technical jargon.'
+};
+
+function getAssistantSystemInstruction(audience = 'adult') {
+  const selectedAudience = audienceGuidance[audience] ? audience : 'adult';
+  return `You are the Micro-SaaS Liquidation Assistant. Help buyers evaluate code quality, understand project valuations, check tech stack compatibility, and guide sellers on listing abandoned repositories.
+
+Adapt your response for this audience: ${audienceGuidance[selectedAudience]}
+
+Return clean Markdown only. Give direct answers without fluff. Use short paragraphs, bullet points, and **bold** key insights when helpful. Do not invent repository facts; clearly label assumptions or missing information.`;
+}
+
 function fallbackReport() {
   return {
     codeHealthScore: 70,
@@ -93,7 +110,7 @@ function validateReport(report) {
   return Object.fromEntries(reportKeys.map((key) => [key, report[key]]));
 }
 
-async function analyzeRepoCode({ readmeText, packageJson, fileTree = [], commits = [] }) {
+async function analyzeRepoCode({ readmeText, packageJson, fileTree = [], commits = [], throwOnError = false }) {
   try {
     if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY.startsWith('your_')) {
       throw new Error('GEMINI_API_KEY is not configured.');
@@ -142,8 +159,9 @@ ${JSON.stringify(commits)}`;
     return validateReport(parseJsonResponse(responseText));
   } catch (error) {
     console.error('Gemini analysis failed; using fallback report:', error.message);
+    if (throwOnError) throw error;
     return fallbackReport();
   }
 }
 
-module.exports = { analyzeRepoCode };
+module.exports = { analyzeRepoCode, getAssistantSystemInstruction };

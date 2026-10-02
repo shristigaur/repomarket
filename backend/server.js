@@ -24,7 +24,8 @@ const PORT = process.env.PORT || 5000;
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
-  'https://repo-market.vercel.app'
+  'https://repo-market.vercel.app',
+  'https://repomarkets.vercel.app'
 ];
 
 app.use(cors({
@@ -48,104 +49,10 @@ app.use('/api/assistant', assistantRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/listings', listingsRouter);
 
-
 function calculateMarketRate(score) {
   const normalizedScore = Math.min(100, Math.max(1, Number(score) || 1));
   return Math.max(100, Math.round((normalizedScore * 50) / 50) * 50);
 }
-
-app.post('/api/listings', requireAuth, async (req, res) => {
-  try {
-    const { repoUrl, repoName, price, sellerEmail, aiReport } = req.body || {};
-    if (!aiReport || typeof aiReport.codeHealthScore !== 'number') {
-      return res.status(400).json({ error: 'A validated AI report is required before publishing.' });
-    }
-
-    const listing = await Listing.create({
-      sellerId: req.user._id,
-      repoUrl,
-      repoName,
-      price,
-      marketRate: calculateMarketRate(aiReport.codeHealthScore),
-      sellerEmail,
-      aiReport
-    });
-    if (req.user.role !== 'SELLER') {
-      req.user.role = 'SELLER';
-      await req.user.save();
-    }
-    return res.status(201).json(listing);
-  } catch (error) {
-    if (error.name === 'ValidationError') {
-      return res.status(400).json({ error: error.message });
-    }
-
-    console.error('Listing creation failed:', error.message);
-    return res.status(500).json({ error: 'Unable to save listing.' });
-  }
-});
-
-app.patch('/api/listings/:id/complete', requireAuth, async (req, res) => {
-  try {
-    const { buyerId } = req.body || {};
-    const listing = await Listing.findById(req.params.id);
-    if (!listing) return res.status(404).json({ error: 'Listing not found.' });
-    if (listing.sellerId?.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ error: 'Only the listing seller can complete this transaction.' });
-    }
-    if (!mongoose.isValidObjectId(buyerId)) return res.status(400).json({ error: 'A valid buyerId is required.' });
-    const buyer = await User.findById(buyerId);
-    if (!buyer) return res.status(404).json({ error: 'Buyer not found.' });
-    if (listing.status !== 'ACTIVE') return res.status(409).json({ error: 'Only active listings can be completed.' });
-    listing.buyerId = buyer._id;
-    listing.status = 'SOLD';
-    await listing.save();
-    return res.json(listing);
-  } catch (error) {
-    if (error.name === 'CastError') return res.status(400).json({ error: 'Invalid listing ID.' });
-    console.error('Transaction completion failed:', error.message);
-    return res.status(500).json({ error: 'Unable to complete transaction.' });
-  }
-});
-
-app.post('/api/listings/:id/purchase', requireAuth, async (req, res) => {
-  try {
-    const listing = await Listing.findById(req.params.id);
-    if (!listing) return res.status(404).json({ error: 'Listing not found.' });
-    if (listing.status !== 'ACTIVE') return res.status(409).json({ error: 'Only active listings can be purchased.' });
-    if (listing.sellerId?.toString() === req.user._id.toString()) {
-      return res.status(403).json({ error: 'You cannot purchase your own listing.' });
-    }
-    listing.buyerId = req.user._id;
-    listing.status = 'SOLD';
-    await listing.save();
-    return res.json(listing);
-  } catch (error) {
-    if (error.name === 'CastError') return res.status(400).json({ error: 'Invalid listing ID.' });
-    console.error('Purchase failed:', error.message);
-    return res.status(500).json({ error: 'Unable to purchase listing.' });
-  }
-});
-
-app.patch('/api/listings/:id/withdraw', requireAuth, async (req, res) => {
-  try {
-    const listing = await Listing.findById(req.params.id);
-    if (!listing) return res.status(404).json({ error: 'Listing not found.' });
-    if (listing.sellerId?.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ error: 'Only the listing seller can withdraw this listing.' });
-    }
-    if (listing.status !== 'ACTIVE') {
-      return res.status(409).json({ error: 'Only active listings can be withdrawn.' });
-    }
-    listing.status = 'WITHDRAWN';
-    await listing.save();
-    return res.json(listing);
-  } catch (error) {
-    if (error.name === 'CastError') return res.status(400).json({ error: 'Invalid listing ID.' });
-    console.error('Listing withdrawal failed:', error.message);
-    return res.status(500).json({ error: 'Unable to withdraw listing.' });
-  }
-});
 
 app.post('/api/ratings', requireAuth, async (req, res) => {
   try {
@@ -157,12 +64,12 @@ app.post('/api/ratings', requireAuth, async (req, res) => {
 
     const listing = await Listing.findById(listingId);
     if (!listing) return res.status(404).json({ error: 'Listing not found.' });
-    if (listing.status !== 'SOLD') return res.status(409).json({ error: 'Ratings are available only after a completed transaction.' });
+    if (listing.status !== 'sold') return res.status(409).json({ error: 'Ratings are available only after a completed transaction.' });
 
     const reviewerId = req.user._id.toString();
     const isBuyer = listing.buyerId?.toString() === reviewerId;
-    const isSeller = listing.sellerId?.toString() === reviewerId;
-    const validReviewee = (isBuyer && listing.sellerId?.toString() === revieweeId) || (isSeller && listing.buyerId?.toString() === revieweeId);
+    const isSeller = listing.userId?.toString() === reviewerId;
+    const validReviewee = (isBuyer && listing.userId?.toString() === revieweeId) || (isSeller && listing.buyerId?.toString() === revieweeId);
     if (!validReviewee) return res.status(403).json({ error: 'Only transaction participants can rate each other.' });
 
     const review = await Rating.create({ listingId, reviewerId: req.user._id, revieweeId, rating: numericRating, comment });
@@ -180,55 +87,6 @@ app.post('/api/ratings', requireAuth, async (req, res) => {
     if (error.name === 'ValidationError' || error.name === 'CastError') return res.status(400).json({ error: 'Invalid rating data.' });
     console.error('Rating creation failed:', error.message);
     return res.status(500).json({ error: 'Unable to save rating.' });
-  }
-});
-
-app.get('/api/listings', async (req, res) => {
-  try {
-    const listings = await Listing.find({ status: 'ACTIVE' }).sort({ createdAt: -1 });
-    return res.json(listings);
-  } catch (error) {
-    console.error('Listing lookup failed:', error.message);
-    return res.status(500).json({ error: 'Unable to fetch listings.' });
-  }
-});
-
-app.get('/api/listings/mine', requireAuth, async (req, res) => {
-  try {
-    const listings = await Listing.find({ sellerId: req.user._id }).sort({ createdAt: -1 });
-    return res.json(listings);
-  } catch (error) {
-    console.error('Seller listing lookup failed:', error.message);
-    return res.status(500).json({ error: 'Unable to fetch your listings.' });
-  }
-});
-
-app.get('/api/listings/purchases', requireAuth, async (req, res) => {
-  try {
-    const listings = await Listing.find({ buyerId: req.user._id, status: 'SOLD' }).sort({ createdAt: -1 });
-    return res.json(listings);
-  } catch (error) {
-    console.error('Buyer purchase lookup failed:', error.message);
-    return res.status(500).json({ error: 'Unable to fetch your purchases.' });
-  }
-});
-
-app.get('/api/listings/:id', async (req, res) => {
-  try {
-    const listing = await Listing.findById(req.params.id);
-
-    if (!listing) {
-      return res.status(404).json({ error: 'Listing not found.' });
-    }
-
-    return res.json(listing);
-  } catch (error) {
-    if (error.name === 'CastError') {
-      return res.status(400).json({ error: 'Invalid listing ID.' });
-    }
-
-    console.error('Listing lookup failed:', error.message);
-    return res.status(500).json({ error: 'Unable to fetch listing.' });
   }
 });
 

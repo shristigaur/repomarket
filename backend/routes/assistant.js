@@ -2,6 +2,7 @@ require('dotenv').config();
 
 const express = require('express');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { getAssistantSystemInstruction } = require('../services/aiService');
 
 const router = express.Router();
 const geminiApiKey = process.env.GEMINI_API_KEY;
@@ -9,8 +10,6 @@ const geminiApiKey = process.env.GEMINI_API_KEY;
 if (!geminiApiKey) {
   console.error('[Assistant] GEMINI_API_KEY is missing. Assistant chat requests cannot be generated.');
 }
-
-const SYSTEM_INSTRUCTION = 'You are the Micro-SaaS Liquidation Assistant. You help buyers evaluate code quality, understand project valuations, check tech stack compatibility, and guide sellers on how to list their abandoned repositories. Respond in plain text only. Do not use any Markdown syntax, including asterisks for bold text, headers, horizontal lines, or backticks for code. Keep paragraphs short, simple, clear, and easy to read.';
 
 function normalizeHistory(history) {
   if (!Array.isArray(history)) return [];
@@ -35,6 +34,7 @@ router.post('/chat', async (req, res) => {
   const rawHistory = req.body?.history;
   const message = typeof rawMessage === 'string' ? rawMessage.trim().slice(0, 2000) : '';
   const history = normalizeHistory(rawHistory);
+  const audience = typeof req.body?.audience === 'string' ? req.body.audience.toLowerCase() : 'adult';
 
   if (!message) {
     return res.status(400).json({ error: 'A non-empty message is required.' });
@@ -48,7 +48,7 @@ router.post('/chat', async (req, res) => {
     const client = new GoogleGenerativeAI(geminiApiKey);
     const model = client.getGenerativeModel({
       model: process.env.GEMINI_MODEL || 'gemini-3.6-flash',
-      systemInstruction: SYSTEM_INSTRUCTION
+      systemInstruction: getAssistantSystemInstruction(audience)
     });
     const result = await model.generateContent({
       contents: [...history, { role: 'user', parts: [{ text: message }] }],

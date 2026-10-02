@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Sparkles, Loader2, GitBranch, DollarSign, CheckCircle2, AlertCircle, BarChart3, Star } from 'lucide-react';
-import { API_URL } from '../api';
+import { apiFetch } from '../api';
 
 export default function ListRepoModal({ isOpen, onClose, onSuccess }) {
   const [repoUrl, setRepoUrl] = useState('');
@@ -23,13 +23,12 @@ export default function ListRepoModal({ isOpen, onClose, onSuccess }) {
     setAiReport(null);
 
     try {
-      const response = await fetch(`${API_URL}/api/listings/analyze`, {
+      const response = await apiFetch('/listings/analyze', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${document.cookie.replace(/(?:(?:^|.*;\s*)token\s*\=\s*([^;]*).*$)|^.*$/, "$1")}`
         },
-        body: JSON.stringify({ repoUrl })
+        body: JSON.stringify({ repoUrl, userPrice: Number(askingPrice) || 0 })
       });
 
       if (!response.ok) {
@@ -39,8 +38,8 @@ export default function ListRepoModal({ isOpen, onClose, onSuccess }) {
 
       const data = await response.json();
       setAiReport(data);
-      if (data.aiEstimatedPrice) {
-        setAskingPrice(data.aiEstimatedPrice.toString());
+      if (data.estimatedPrice) {
+        setAskingPrice(data.estimatedPrice.toString());
       }
     } catch (err) {
       setError(err.message);
@@ -63,36 +62,27 @@ export default function ListRepoModal({ isOpen, onClose, onSuccess }) {
     setIsSubmitting(true);
 
     try {
-      // The API expects repoUrl, repoName, description, userPrice, aiEstimatedPrice, aiRating, aiAnalysisReasoning
       const repoNameParts = repoUrl.split('/');
       const repoName = repoNameParts[repoNameParts.length - 1] || 'My Repository';
-
-      const response = await fetch(`${API_URL}/api/listings`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        // credentials: 'omit' is not right, we rely on cookies since it's requireAuth
-      });
-      // Need credentials: 'include' for cookies or let it default if same origin. But we use API_URL which might be different, let's use credentials: 'include'
-      // Wait, let's look at how other API calls in this project do it. I'll just rewrite the fetch.
-      
       const payload = {
         repoUrl,
         repoName,
-        description: aiReport.aiAnalysisReasoning || 'A repository listing',
+        description: aiReport.summary || 'A repository listing',
         userPrice: Number(askingPrice),
-        aiEstimatedPrice: aiReport.aiEstimatedPrice,
-        aiRating: aiReport.aiRating,
-        aiAnalysisReasoning: aiReport.aiAnalysisReasoning
+        aiEstimatedPrice: aiReport.estimatedPrice,
+        aiRating: aiReport.rating,
+        aiAnalysis: {
+          summary: aiReport.summary,
+          breakdown: aiReport.breakdown,
+          priceRange: aiReport.priceRange
+        }
       };
 
-      const res = await fetch(`${API_URL}/api/listings`, {
+      const res = await apiFetch('/listings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include',
         body: JSON.stringify(payload)
       });
 

@@ -25,7 +25,7 @@ export default function MyListings() {
       return undefined;
     }
     Promise.all([
-      apiFetch('/listings/mine'),
+      apiFetch(`/listings/my-listings?userId=${encodeURIComponent(user._id)}`),
       apiFetch('/listings/purchases')
     ])
       .then(async ([listingResponse, purchaseResponse]) => {

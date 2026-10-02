@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ExternalLink, Trash2, AlertTriangle, Star, CheckCircle2, DollarSign } from 'lucide-react';
-import { API_URL } from '../api';
+import { apiFetch } from '../api';
 import { useAuth } from '../auth';
 
 export default function MyListingsView() {
@@ -24,21 +24,10 @@ export default function MyListingsView() {
     if (!user || !user._id) return;
     try {
       setLoading(true);
-      const token = localStorage.getItem('token') || '';
-      
-      const res = await fetch(`${API_URL}/api/listings/my-listings?userId=${user._id}`, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        credentials: 'omit' // We are passing Bearer/query instead
-      });
-      
-      if (!res.ok) {
-        throw new Error(`HTTP error! Status: ${res.status}`);
-      }
-      const data = await res.json();
-      setListings(data);
+      const res = await apiFetch(`/listings/my-listings?userId=${encodeURIComponent(user._id)}`);
+      const data = await res.json().catch(() => []);
+      if (!res.ok) throw new Error(data.error || 'Unable to load your listings.');
+      setListings(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -50,18 +39,9 @@ export default function MyListingsView() {
     if (!deleteTarget || !user) return;
     setIsDeleting(true);
     try {
-      const token = localStorage.getItem('token') || '';
-      const res = await fetch(`${API_URL}/api/listings/${deleteTarget._id}?userId=${user._id}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        credentials: 'omit'
-      });
-      if (!res.ok) {
-        throw new Error(`HTTP error! Status: ${res.status}`);
-      }
+      const res = await apiFetch(`/listings/${deleteTarget._id}`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Unable to remove listing.');
       
       // Update local state
       setListings((prev) => prev.filter(listing => listing._id !== deleteTarget._id));
